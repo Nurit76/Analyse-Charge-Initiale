@@ -1,0 +1,23 @@
+let
+    Source = Folder.Files( Chemin & Dossier_Arrete & "\Charges"),
+    #"Traitement Source 1" = Table.SelectRows(Source, each [Attributes]?[Hidden]? <> true),
+    #"Traitement Source 2" = Table.AddColumn(#"Traitement Source 1", "Transformer le fichier à partir de Charges", each #"Transformer le fichier à partir de Charges"([Content])),
+    #"Traitement Source 3" = Table.RenameColumns(#"Traitement Source 2", {"Name", "Source.Name"}),
+    #"Traitement Source 4" = Table.SelectColumns(#"Traitement Source 3", {"Source.Name", "Transformer le fichier à partir de Charges"}),
+    #"Traitement Source 5" = Table.ExpandTableColumn(#"Traitement Source 4", "Transformer le fichier à partir de Charges", Table.ColumnNames(#"Transformer le fichier à partir de Charges"(#"Exemple de fichier"))),
+    #"Traitement Source 6" = Table.TransformColumnTypes(#"Traitement Source 5",{{"Source.Name", type text}, {"date", type date}, {"periode", type text}, {"Entité", type any}, {"Type", type text}, {"code", type text}, {"nom", type text}, {"cycle", type text}, {"priorite", type text}, {"domaine", type text}, {"dir", type text}, {"mutualise", type text}, {"validation", type any}, {"Charge globale référente", Int64.Type}, {"Charge actualisée", Int64.Type}, {"Consommé", Int64.Type}, {"Reprise du Consommé", Int64.Type}, {"Consommé global", Int64.Type}, {"Reste à Consommé", Int64.Type}, {"Charge initial", Int64.Type}, {"Sous Equipe", type any}, {"Profil", type any}}),
+    
+    #"Out Doc 2023_2024" = Table.SelectRows(#"Traitement Source 6", each ([Source.Name] <> "Template_suivi_operationnel_2023_2024.xlsx")),
+    #"Colonnes renommées" = Table.RenameColumns(#"Out Doc 2023_2024",{{"cycle", "Cycle de vie"}, {"nom", "Description"}, {"code", "ID TRISKELL"}, {"domaine", "Domaine"}, {"Charge initial", "Charge initiale"}}),
+    
+    FILTRES = Table.SelectRows(#"Colonnes renommées", each ([Type] = "Projet") and ([Cycle de vie] = "1. Enregistré" or [Cycle de vie] = "2. Ouvert" or [Cycle de vie] = "3. En cadrage") and ([ID TRISKELL] <> "Template Projet") and ([Domaine] <> null)),
+    #"Lignes groupées" = Table.Group(FILTRES, {"ID TRISKELL", "Description", "Cycle de vie", "Entité"}, {{"Charge Initiale", each List.Sum([Charge initiale]), type number}}),
+    #"Lignes filtrées1" = Table.SelectRows(#"Lignes groupées", each ([Charge Initiale] <> 0)),
+    #"Valeur remplacée" = Table.ReplaceValue(#"Lignes filtrées1","HÉBERGEUR","OSI.HEB",Replacer.ReplaceText,{"Entité"}),
+    #"Valeur remplacée1" = Table.ReplaceValue(#"Valeur remplacée","TRANSFORMATION DU SI","TSI",Replacer.ReplaceText,{"Entité"}),
+    #"Valeur remplacée2" = Table.ReplaceValue(#"Valeur remplacée1","DIRECTION NUMERIQUE ET INNOVATION","DNI",Replacer.ReplaceText,{"Entité"}),
+    #"Lignes filtrées2" = Table.SelectRows(#"Valeur remplacée2", each ([Entité] <> "MGEFI MÉTIERS")),
+    #"Valeur remplacée3" = Table.ReplaceValue(#"Lignes filtrées2","EDITEUR","OSI.EDI",Replacer.ReplaceText,{"Entité"}),
+    #"Colonne dynamique" = Table.Pivot(#"Valeur remplacée3", List.Distinct(#"Valeur remplacée3"[Entité]), "Entité", "Charge Initiale", List.Sum)
+in
+    #"Colonne dynamique"
