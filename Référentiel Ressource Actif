@@ -1,0 +1,8 @@
+let
+    Source = Excel.Workbook(File.Contents("\\matmut.fr\partages\Matmut\PMO Centrale\98 - Dataviz\DVZ_Charge_consolidée\2024_08\Referentiel\Référentiel Personne_2024_08.xlsx"), null, true),
+    Actif_Sheet = Source{[Item="Actif",Kind="Sheet"]}[Data],
+    #"En-têtes promus" = Table.PromoteHeaders(Actif_Sheet, [PromoteAllScalars=true]),
+    #"Type modifié" = Table.TransformColumnTypes(#"En-têtes promus",{{" id", Int64.Type}, {"Date extraction", type date}, {" Nom", type text}, {" Login", type text}, {" Email", type text}, {" Skype ID", type text}, {" Langage", type text}, {" Calendrier", type text}, {" Structure d'appartenance", type text}, {" Temps passés", type logical}, {" Peut créer des vues publiques?", type logical}, {" Temps passés sur jours non trav.", type logical}, {" Valeur par défaut", Int64.Type}, {" Minimum", Int64.Type}, {" Maximum", Int64.Type}, {" Activités non productives?", type logical}, {" Configurateur", type logical}, {" is_grdp", type logical}, {" Active", type logical}, {" Entité principale", type text}, {" Modifié Par", type text}, {" Créateur", type text}, {" Date Création", type datetime}, {" Dernière Edition", type datetime}, {" Pôle", type text}, {" Équipe", type text}, {" Profil", type text}, {" Sous-Équipe", type text}, {" Entité", type text}, {" Type de ressource", type text}, {" Code Sous-équipe", type text}, {" Trigramme Utilisateur", type text}, {" Société ", type text}}),
+    #"Lignes filtrées" = Table.SelectRows(#"Type modifié", let latest = List.Max(#"Type modifié"[Date extraction]) in each [Date extraction] = latest)
+in
+    #"Lignes filtrées"
