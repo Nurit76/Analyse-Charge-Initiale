@@ -1,0 +1,4 @@
+let
+    Source = Table.Combine({#"Sources Dates Charges", #"Sources Dates PRJ"})
+in
+    Source
