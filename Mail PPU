@@ -1,0 +1,9 @@
+let
+    Source = DATA,
+    #"Autres colonnes supprimées" = Table.SelectColumns(Source,{"PPU"}),
+    #"Lignes filtrées" = Table.SelectRows(#"Autres colonnes supprimées", each ([PPU] <> null)),
+    #"Doublons supprimés" = Table.Distinct(#"Lignes filtrées"),
+    #"Requêtes fusionnées" = Table.NestedJoin(#"Doublons supprimés",{"PPU"},Référentiel_Ressource_Actif,{" Nom"},"Référentiel_Ressource_Actif",JoinKind.LeftOuter),
+    #"Référentiel_Ressource_Actif développé" = Table.ExpandTableColumn(#"Requêtes fusionnées", "Référentiel_Ressource_Actif", {" Email"}, {"Référentiel_Ressource_Actif. Email"})
+in
+    #"Référentiel_Ressource_Actif développé"
