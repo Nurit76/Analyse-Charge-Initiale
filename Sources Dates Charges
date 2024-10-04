@@ -1,0 +1,10 @@
+let
+    Source = Folder.Files( Chemin & Dossier_Arrete & "\Charges"),
+    #"Colonnes renommées1" = Table.RenameColumns(Source,{{"Name", "Document source"}, {"Date modified", "Date Extraction"}}),
+    #"Autres colonnes supprimées" = Table.SelectColumns(#"Colonnes renommées1",{"Document source", "Date Extraction"}),
+    #"Valeur remplacée" = Table.ReplaceValue(#"Autres colonnes supprimées","Template_suivi_operationnel_","Rapport Charges (Rapport Suivi Budgétaire) ",Replacer.ReplaceText,{"Document source"}),
+    #"Valeur remplacée1" = Table.ReplaceValue(#"Valeur remplacée",".xlsx","",Replacer.ReplaceText,{"Document source"}),
+    #"Type modifié" = Table.TransformColumnTypes(#"Valeur remplacée1",{{"Date Extraction", type date}})
+    
+in
+    #"Type modifié"
