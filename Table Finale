@@ -7,7 +7,7 @@ let
     #"Autres colonnes supprimées" = Table.SelectColumns(#"Colonnes renommées",{"ID TRISKELL", "Description", "Cycle de vie", "$IntegrationLivraison", "$NonconcerneORGA", "$NonconcerneHebergeur", "$NonconcerneEditeur", "$NonconcerneMOM", "$_$Domaine", "$_$Porteurdeprojetunique", "$_$ChefsdeprojetsEntite"}),
     #"Colonnes renommées1" = Table.RenameColumns(#"Autres colonnes supprimées",{{"$_$Domaine", "Domaine"}, {"$_$Porteurdeprojetunique", "PPU"}, {"$_$ChefsdeprojetsEntite", "CP. Entité"}}),
     #"Valeur remplacée" = Table.ReplaceValue(#"Colonnes renommées1",",","",Replacer.ReplaceText,{"CP. Entité"}),
-    #"Lignes filtrées" = Table.SelectRows(#"Valeur remplacée", each ([Cycle de vie] = "1. Enregistré" or [Cycle de vie] = "2. Ouvert" or [Cycle de vie] = "3. En cadrage")),
+    #"Lignes filtrées" = Table.SelectRows(#"Valeur remplacée", each ([Cycle de vie] = "3. En cadrage")),
     #"Requêtes fusionnées" = Table.NestedJoin(#"Lignes filtrées",{"ID TRISKELL"},#"Base Charges",{"ID TRISKELL"},"Base Charges",JoinKind.LeftOuter),
     #"Base Charges développé" = Table.ExpandTableColumn(#"Requêtes fusionnées", "Base Charges", {"DSI MGEFI", "DSI MOM", "OSI.EDI", "OSI.HEB", "TSI", "DNI"}, {"DSI MGEFI", "DSI MOM", "OSI.EDI", "OSI.HEB", "TSI", "DNI"}),
     #"Supr MGEFI ET DNI" = Table.RemoveColumns(#"Base Charges développé",{"DSI MGEFI", "DNI"}),
@@ -17,29 +17,43 @@ let
 TSI = Table.AddColumn(#"Valeur remplacée1", "TSI ?", each if [#"$NonconcerneORGA"] = 1 then "Non attendu"
 else if [#"$NonconcerneORGA"] = 0 and [TSI] = 0 then "CI Manquante"
 else if [#"$NonconcerneORGA"] = 0 and [TSI] <> 0 then "OK"
-else "??"),
+else "??", type text),
 
-EDI = Table.AddColumn(TSI, "EDI ?", each if [#"$NonconcerneEditeur"] = 1 then "Non attendu"
+OSI.EDI = Table.AddColumn(TSI, "OSI.EDI ?", each if [#"$NonconcerneEditeur"] = 1 then "Non attendu"
 else if [#"$NonconcerneEditeur"] = 0 and [OSI.EDI] = 0 then "CI Manquante"
 else if [#"$NonconcerneEditeur"] = 0 and [OSI.EDI] <> 0 then "OK"
-else "??"),
+else "??", type text),
 
-MOM = Table.AddColumn(EDI, "MOM ?", each if [#"$NonconcerneMOM"] = 1 then "Non attendu"
+MOM = Table.AddColumn(OSI.EDI, "MOM ?", each if [#"$NonconcerneMOM"] = 1 then "Non attendu"
 else if [#"$NonconcerneMOM"] = 0 and [DSI MOM] = 0 then "CI Manquante"
 else if [#"$NonconcerneMOM"] = 0 and [DSI MOM] <> 0 then "OK"
-else "??"),
-    HEB = Table.AddColumn(MOM, "HEB ?", each if [#"$NonconcerneHebergeur"] = 1 then "Non attendu"
+else "??", type text),
+    OSI.HEB = Table.AddColumn(MOM, "OSI.HEB ?", 
+each if [#"$IntegrationLivraison"] = 1 then "Non attendu"
+else if [#"$NonconcerneHebergeur"] = 1 then "Non attendu"
 else if [#"$NonconcerneHebergeur"] = 0 and [OSI.HEB] = 0 then "CI Manquante"
 else if [#"$NonconcerneHebergeur"] = 0 and [OSI.HEB] <> 0 then "OK"
-else "??"),
-    #"Personnalisée ajoutée4" = Table.AddColumn(HEB, "Prévenir PPU Charge Initiale", each 
+else "??", type text),
+    #"Personnalisée ajoutée4" = Table.AddColumn(OSI.HEB, "Prévenir PPU Charge Initiale", each 
 if [#"TSI ?"] =  "CI Manquante"
-or [#"EDI ?"] =  "CI Manquante"
-or [#"HEB ?"] = "CI Manquante"
+or [#"OSI.EDI ?"] =  "CI Manquante"
+or [#"OSI.HEB ?"] = "CI Manquante"
 or [#"MOM ?"] = "CI Manquante"
 
 then "KO" else "OK"),
-    #"Autres colonnes supprimées1" = Table.SelectColumns(#"Personnalisée ajoutée4",{"ID TRISKELL", "Description", "Cycle de vie", "Domaine", "PPU", "TSI ?", "EDI ?", "MOM ?", "HEB ?", "Prévenir PPU Charge Initiale"}),
-    #"Lignes filtrées1" = Table.SelectRows(#"Autres colonnes supprimées1", each ([Prévenir PPU Charge Initiale] = "KO") and ([Domaine] <> null and [Domaine] <> "MULTI DOMAINES" and [Domaine] <> "TRANSVERSES - F&M") and ([PPU] <> null))
+    #"Autres colonnes supprimées1" = Table.SelectColumns(#"Personnalisée ajoutée4",{"ID TRISKELL", "Description", "Cycle de vie", "Domaine", "PPU", "TSI ?", "OSI.EDI ?", "MOM ?", "OSI.HEB ?", "Prévenir PPU Charge Initiale"}),
+    #"Lignes filtrées1" = Table.SelectRows(#"Autres colonnes supprimées1", each ([Prévenir PPU Charge Initiale] = "KO") and ([Domaine] <> null and [Domaine] <> "MULTI DOMAINES" and [Domaine] <> "TRANSVERSES - F&M") and ([PPU] <> null)),
+    #"Requêtes fusionnées1" = Table.NestedJoin(#"Lignes filtrées1",{"PPU"},#"Reférentiel Personne Actif",{" Nom"},"Reférentiel Personne Actif",JoinKind.LeftOuter),
+    #"Reférentiel Personne Actif développé" = Table.ExpandTableColumn(#"Requêtes fusionnées1", "Reférentiel Personne Actif", {" Entité"}, {"Entité du PPU"}),
+    #"Colonnes supprimées" = Table.RemoveColumns(#"Reférentiel Personne Actif développé",{"Prévenir PPU Charge Initiale"}),
+    
+   #"Entité-->TRIG" = Table.ReplaceValue(
+    Table.ReplaceValue(
+        Table.ReplaceValue(#"Colonnes supprimées", 
+            "TRANSFORMATION DU SI", "TSI", Replacer.ReplaceText, {"Entité du PPU"}), 
+        "EDITEUR", "OSI.EDI", Replacer.ReplaceText, {"Entité du PPU"}), 
+    "HÉBERGEUR", "OSI.HEB", Replacer.ReplaceText, {"Entité du PPU"}
+)
+
 in
-    #"Lignes filtrées1"
+    #"Entité-->TRIG"
